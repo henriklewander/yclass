@@ -1,0 +1,47 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Lägg till elev",
+        "description": "Logga in med elevens konto hos Göteborgs Stad (samma som \"Inloggning för personal och elever\" i Vklass).",
+        "data": {
+          "username": "Användarnamn",
+          "password": "Lösenord"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Logga in igen",
+        "description": "Vklass godtar inte längre lösenordet för {username}.",
+        "data": {
+          "password": "Lösenord"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Fel användarnamn eller lösenord.",
+      "cannot_connect": "Kunde inte nå Vklass eller Göteborgs Stads inloggning. Se loggen."
+    },
+    "abort": {
+      "already_configured": "Eleven är redan tillagd.",
+      "reauth_successful": "Inloggad igen."
+    }
+  },
+  "entity": {
+    "calendar": {
+      "homework": {
+        "name": "Läxor"
+      },
+      "days_off": {
+        "name": "Lediga dagar"
+      }
+    },
+    "sensor": {
+      "homework": {
+        "name": "Kommande läxor"
+      },
+      "schoolday": {
+        "name": "Skoldag"
+      }
+    }
+  }
+}

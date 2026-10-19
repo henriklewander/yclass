@@ -1,0 +1,47 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a student",
+        "description": "Sign in with the student's Göteborgs Stad account (the one used for \"Inloggning för personal och elever\" on Vklass).",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Sign in again",
+        "description": "Vklass no longer accepts the password for {username}.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Wrong username or password.",
+      "cannot_connect": "Could not reach Vklass or Göteborgs Stad's login. See the log for details."
+    },
+    "abort": {
+      "already_configured": "This student is already added.",
+      "reauth_successful": "Signed in again."
+    }
+  },
+  "entity": {
+    "calendar": {
+      "homework": {
+        "name": "Homework"
+      },
+      "days_off": {
+        "name": "Days off"
+      }
+    },
+    "sensor": {
+      "homework": {
+        "name": "Upcoming homework"
+      },
+      "schoolday": {
+        "name": "School day"
+      }
+    }
+  }
+}

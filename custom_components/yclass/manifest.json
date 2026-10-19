@@ -1,0 +1,13 @@
+{
+  "domain": "yclass",
+  "name": "yclass (Vklass läxor)",
+  "codeowners": ["@henriklewander"],
+  "config_flow": true,
+  "dependencies": ["frontend", "http"],
+  "documentation": "https://github.com/henriklewander/yclass",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/henriklewander/yclass/issues",
+  "requirements": [],
+  "version": "0.5.0"
+}
