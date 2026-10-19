@@ -48,8 +48,11 @@ Without HACS: copy `custom_components/yclass` to
 ## The card
 
 The integration serves the card itself and loads it on every dashboard, so
-there is no dashboard resource to add. On a dashboard: *Edit → Add card →
-"yclass – elev"*, then pick the student. In YAML, one card per student:
+there is no dashboard resource to add. On a dashboard: *Edit → Add card*,
+then either tab *By card* (*Efter kort*) and search for **yclass**, or tab *By
+entity* (*Efter entitet*), search for the student's name, pick one of their
+entities and choose the suggested **yclass – elev**. In YAML, one card per
+student:
 
 ```yaml
 type: custom:yclass-card

@@ -268,6 +268,13 @@ async function define() {
     description: "Skoldagens start och slut, lunch och kommande läxor och prov för en elev.",
     preview: true,
     documentationURL: "https://github.com/henriklewander/yclass",
+    // HA 2026.10+: offer the card under "Add card → By entity" for any yclass
+    // entity, since that tab is where the card picker opens.
+    getEntitySuggestion(hass, entityId) {
+      const ent = hass.entities?.[entityId];
+      if (!ent || ent.platform !== "yclass" || !ent.device_id) return null;
+      return { config: { type: "custom:yclass-card", device: ent.device_id } };
+    },
   });
   console.info(`%c yclass-card %c ${VERSION} `, "background:#3f51b5;color:#fff", "");
 }

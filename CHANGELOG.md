@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1 (2026-10-19)
+
+- The card is suggested under *Add card → By entity* when a yclass entity is
+  picked (HA 2026.10+). Before, it only showed under *By card*.
+
 ## 0.5.0 (2026-10-19)
 
 - Sensor *Skoldag*: when the coming school day starts and ends, and its lunch.
