@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0 (2026-10-20)
+
+- First stable release. No functional changes since 0.5.1.
+- Shorter README focused on installing and using the integration.
+
 ## 0.5.1 (2026-10-19)
 
 - The card is suggested under *Add card → By entity* when a yclass entity is
