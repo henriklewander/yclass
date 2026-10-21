@@ -104,12 +104,18 @@ def test_lessons_and_school_days() -> None:
             lesson("2026-10-19 08:10", "2026-10-19 13:50"),  # before `first`
         ]
     )
+    data.lessons.append(
+        vklass.Lesson("Idrott och hälsa", datetime(2026, 10, 21, 12, 5), datetime(2026, 10, 21, 13, 0), False, "IDH")
+    )
     data.lunch = {date(2026, 10, 20): ["Fiskpudding (Fisk)"]}
     days = data.school_days(date(2026, 10, 20))
     assert [d.day for d in days] == [date(2026, 10, 20), date(2026, 10, 21)]
     assert (days[0].start, days[0].end) == (datetime(2026, 10, 20, 8, 10), datetime(2026, 10, 20, 13, 25))
     assert days[0].lunch == ["Fiskpudding (Fisk)"]
     assert days[1].lunch == []
+    assert days[0].pe == []
+    assert days[1].pe_times() == [{"start": "12:05", "end": "13:00"}]
+    assert vklass.Lesson("Musik", days[0].start, days[0].end, False, "MU").is_pe is False
 
 
 def test_parse_lunch() -> None:

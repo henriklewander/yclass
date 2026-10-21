@@ -76,7 +76,7 @@ class YclassSchoolDaySensor(YclassEntity, SensorEntity):
     """
 
     _attr_device_class = SensorDeviceClass.TIMESTAMP
-    _unrecorded_attributes = frozenset({"days", "lunch", "first_name", "reference_date"})
+    _unrecorded_attributes = frozenset({"days", "lunch", "pe", "first_name", "reference_date"})
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -114,5 +114,6 @@ class YclassSchoolDaySensor(YclassEntity, SensorEntity):
                 "start": f"{first.start:%H:%M}",
                 "end": f"{first.end:%H:%M}",
                 "lunch": first.lunch,
+                "pe": first.pe_times(),
             }
         return attrs

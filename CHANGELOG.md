@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0 (2026-10-21)
+
+- Card: a row with an *Idrott* label and the lesson time when the school day
+  has Idrott och hälsa. The schoolday sensor has it in the `pe` attribute.
+
 ## 1.0.0 (2026-10-20)
 
 - First stable release. No functional changes since 0.5.1.

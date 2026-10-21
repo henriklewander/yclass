@@ -147,6 +147,16 @@ class YclassCard extends HTMLElement {
       dayHtml = `<div class="day"><div class="day-label muted">Ingen skoldag inlagd framöver</div></div>`;
     }
 
+    const pe = sa.date ? sa.pe || [] : [];
+    const peHtml = pe.length
+      ? `<div class="pe">
+           <ha-icon icon="mdi:run"></ha-icon>
+           <span class="chip chip-pe">Idrott</span>
+           <span>${pe.map((l) => `${esc(l.start)}–${esc(l.end)}`).join(", ")}</span>
+           <span class="tag">ta med idrottskläder</span>
+         </div>`
+      : "";
+
     const lunch = sa.date ? sa.lunch || [] : [];
     const lunchHtml = lunch.length
       ? `<div class="lunch">
@@ -198,6 +208,7 @@ class YclassCard extends HTMLElement {
           <ha-icon icon="mdi:school-outline"></ha-icon>
         </div>
         ${dayHtml}
+        ${peHtml}
         ${lunchHtml}
         <div class="section">Läxor och prov</div>
         ${hwHtml}
@@ -242,6 +253,9 @@ const STYLE = `<style>
   .meta { font-size: 0.85em; color: var(--secondary-text-color); }
   .chip { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 8px; font-size: 0.9em;
           font-weight: 500; color: var(--text-primary-color, #fff); background: var(--error-color, #db4437); }
+  .chip-pe { background: var(--info-color, #039be5); margin-right: 0; }
+  .pe { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .pe ha-icon { --mdc-icon-size: 20px; color: var(--secondary-text-color); flex: none; }
   .test .title { font-weight: 500; }
   .desc { margin: 6px 0 2px calc(5.5em + 12px); font-size: 0.9em; color: var(--secondary-text-color); white-space: normal; }
   .desc a { display: block; margin-top: 4px; color: var(--primary-color); }

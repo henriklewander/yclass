@@ -113,6 +113,12 @@ class Lesson:
     start: datetime  # naive, Swedish local time
     end: datetime
     cancelled: bool
+    code: str = ""  # the short subject code Vklass shows in the schedule, e.g. "IDH"
+
+    @property
+    def is_pe(self) -> bool:
+        """Idrott och hälsa: the day the student needs gym clothes."""
+        return bool(re.search(r"(?i)idrott|gymnastik", self.title)) or self.code.upper().startswith("IDH")
 
 
 @dataclass(slots=True)
@@ -121,6 +127,10 @@ class SchoolDay:
     start: datetime  # first lesson starts (naive, Swedish local time)
     end: datetime  # last lesson ends
     lunch: list[str]
+    pe: list[Lesson] = field(default_factory=list)  # Idrott och hälsa lessons that day
+
+    def pe_times(self) -> list[dict[str, str]]:
+        return [{"start": f"{lesson.start:%H:%M}", "end": f"{lesson.end:%H:%M}"} for lesson in self.pe]
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -128,6 +138,7 @@ class SchoolDay:
             "start": self.start.isoformat(timespec="minutes"),
             "end": self.end.isoformat(timespec="minutes"),
             "lunch": self.lunch,
+            "pe": self.pe_times(),
         }
 
 
@@ -150,6 +161,7 @@ class CalendarData:
                 start=min(lesson.start for lesson in lessons),
                 end=max(lesson.end for lesson in lessons),
                 lunch=self.lunch.get(day, []),
+                pe=[lesson for lesson in lessons if lesson.is_pe],
             )
             for day, lessons in sorted(by_day.items())
         ]
@@ -261,6 +273,7 @@ def parse_events(events: list[dict[str, Any]]) -> CalendarData:
                     start=_parse_dt(ev["start"]),
                     end=_parse_dt(ev["end"]),
                     cancelled=bool(ev.get("cancelled")),
+                    code=(ev.get("text") or "").strip().splitlines()[0] if (ev.get("text") or "").strip() else "",
                 )
             )
         elif etype == EVENT_TYPE_ASSIGNMENT:

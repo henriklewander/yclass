@@ -25,8 +25,8 @@ pick one of the student's entities under *By entity* and choose the suggested
 
 The card shows the student's first name, when the school day starts and ends,
 that day's lunch, and homework and tests in date order. Tests are marked
-*Prov*. Tap an item to read the teacher's text. After 17:00 the card shows the
-next school day.
+*Prov*, and a day with Idrott och hälsa gets an *Idrott* row. Tap an item to
+read the teacher's text. After 17:00 the card shows the next school day.
 
 ```yaml
 type: custom:yclass-card
