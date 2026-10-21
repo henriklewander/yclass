@@ -127,3 +127,36 @@ def test_parse_lunch() -> None:
     )
     assert vklass.parse_lunch(page) == {date(2026, 10, 20): ["Pasta med ost (Fågel)", "Linsgryta (Vegetariskt)"]}
     assert vklass.parse_lunch("<html></html>") == {}
+
+
+def test_agenda() -> None:
+    def off(start, end, title, text=""):
+        return {"id": f"VacantDay{start}{title}", "title": title, "start": f"{start} 00:00", "end": f"{end} 23:59",
+                "allDay": True, "text": text, "eventType": 8, "lectureId": 1}
+
+    data = parse_events(
+        [
+            off("2026-10-26", "2026-10-26", "Läslov", "Skolan och fritidshemmet är stängda"),
+            off("2026-10-27", "2026-10-30", "Läslov"),
+            off("2026-10-31", "2026-10-31", "Alla helgons dag"),  # Saturday: left out
+            off("2027-01-04", "2027-01-06", "Lovdag", "Lovdagar - Skolan är stängd"),
+            off("2027-01-06", "2027-01-06", "Trettondagen"),  # inside the longer Lovdag: left out
+            {"id": "SchoolEvent1", "title": "Skolfotografering", "start": "2026-10-28 00:00", "end": None,
+             "allDay": True, "text": "", "eventType": 4, "lectureId": 1, "detailUrl": "/Calendar/SchoolEvent/1"},
+            {"id": "SchoolEvent2", "title": "Utvecklingssamtal", "start": "2026-11-02 14:00",
+             "end": "2026-11-02 14:30", "allDay": False, "eventType": 4, "lectureId": 2},
+        ]
+    )
+    items = data.agenda(date(2026, 10, 21), date(2027, 1, 31))
+    assert [(i["start"], i["title"]) for i in items] == [
+        ("2026-10-26", "Läslov"),
+        ("2026-10-27", "Läslov"),
+        ("2026-10-28", "Skolfotografering"),
+        ("2026-11-02", "Utvecklingssamtal"),
+        ("2027-01-04", "Lovdag"),
+    ]
+    assert items[0]["description"] == "Skolan och fritidshemmet är stängda"
+    assert items[1]["end"] == "2026-10-30"
+    assert items[4]["description"] == "Skolan är stängd"
+    assert items[3]["time"] == "14:00–14:30" and items[3]["kind"] == "event"
+    assert data.agenda(date(2026, 11, 3), date(2026, 12, 1)) == []

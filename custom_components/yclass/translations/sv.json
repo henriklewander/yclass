@@ -33,6 +33,9 @@
       },
       "days_off": {
         "name": "Lediga dagar"
+      },
+      "events": {
+        "name": "Händelser"
       }
     },
     "sensor": {

@@ -25,8 +25,10 @@ pick one of the student's entities under *By entity* and choose the suggested
 
 The card shows the student's first name, when the school day starts and ends,
 that day's lunch, and homework and tests in date order. Tests are marked
-*Prov*, and a day with Idrott och hälsa gets an *Idrott* row. Tap an item to
-read the teacher's text. After 17:00 the card shows the next school day.
+*Prov*, and a day with Idrott och hälsa gets an *Idrott* row. Below that,
+*Lov och händelser* lists study days, holidays and school events for the coming
+30 days. Tap a homework item to read the teacher's text. After 17:00 the card
+shows the next school day.
 
 ```yaml
 type: custom:yclass-card
@@ -41,7 +43,8 @@ max_items: 10                    # optional
 | `sensor.<name>_skoldag` | Start of the coming school day (today until 17:00, then the next one), with end time and lunch as attributes. |
 | `sensor.<name>_kommande_laxor` | Number of upcoming homework and tests; the list is in the `homework` attribute. |
 | `calendar.<name>_laxor` | Homework and tests. |
-| `calendar.<name>_lediga_dagar` | Holidays and other days off. |
+| `calendar.<name>_lediga_dagar` | Holidays, study days and other days off. |
+| `calendar.<name>_handelser` | School events such as photo day or development talks. |
 
 Vklass is checked once an hour. Vklass publishes the lunch menu for this week
 and next.

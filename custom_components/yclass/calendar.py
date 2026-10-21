@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 from .const import VKLASS_TZ
 from .coordinator import YclassConfigEntry, YclassCoordinator
 from .entity import YclassEntity
-from .vklass import CalendarData, DayOff, Homework
+from .vklass import CalendarData, DayOff, Homework, SchoolEvent
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,12 +51,32 @@ def day_off_event(off: DayOff) -> CalendarEvent:
     )
 
 
+def school_event_event(ev: SchoolEvent) -> CalendarEvent:
+    if ev.all_day:
+        start: date | datetime = ev.start.date()
+        end: date | datetime = (ev.end.date() if ev.end and ev.end.date() > start else start) + timedelta(days=1)
+    else:
+        start = ev.start.replace(tzinfo=VKLASS_TZ)
+        end = ev.end.replace(tzinfo=VKLASS_TZ) if ev.end and ev.end > ev.start else start + timedelta(hours=1)
+    return CalendarEvent(
+        start=start,
+        end=end,
+        summary=ev.title,
+        description="\n\n".join(d for d in (ev.description, ev.url) if d) or None,
+        uid=f"vklass-event-{ev.start.isoformat()}-{ev.title}",
+    )
+
+
 def homework_events(data: CalendarData) -> list[CalendarEvent]:
     return [homework_event(hw) for hw in data.homework]
 
 
 def day_off_events(data: CalendarData) -> list[CalendarEvent]:
     return [day_off_event(off) for off in data.days_off]
+
+
+def school_events(data: CalendarData) -> list[CalendarEvent]:
+    return [school_event_event(ev) for ev in data.events]
 
 
 async def async_setup_entry(
@@ -67,6 +87,7 @@ async def async_setup_entry(
         [
             YclassCalendar(coordinator, "homework", homework_events),
             YclassCalendar(coordinator, "days_off", day_off_events),
+            YclassCalendar(coordinator, "events", school_events),
         ]
     )
 

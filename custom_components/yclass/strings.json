@@ -33,6 +33,9 @@
       },
       "days_off": {
         "name": "Days off"
+      },
+      "events": {
+        "name": "School events"
       }
     },
     "sensor": {

@@ -153,7 +153,6 @@ class YclassCard extends HTMLElement {
            <ha-icon icon="mdi:run"></ha-icon>
            <span class="chip chip-pe">Idrott</span>
            <span>${pe.map((l) => `${esc(l.start)}–${esc(l.end)}`).join(", ")}</span>
-           <span class="tag">ta med idrottskläder</span>
          </div>`
       : "";
 
@@ -201,6 +200,32 @@ class YclassCard extends HTMLElement {
           .join("")}</ul>${items.length > max ? `<div class="more muted">+ ${items.length - max} till</div>` : ""}`
       : `<div class="empty muted">Inga läxor eller prov framöver 🎉</div>`;
 
+    // Days off and school events (studiedag, lov, skolfotografering, idrottsdag, ...)
+    const agenda = sa.agenda || [];
+    const agendaHtml = agenda.length
+      ? `<div class="section">Lov och händelser</div>
+         <ul class="agenda">${agenda
+           .map((a) => {
+             const meta = [
+               a.end && a.end !== a.start ? `t.o.m. ${shortDay(a.end)}` : "",
+               a.time || "",
+               a.description || "",
+             ].filter(Boolean);
+             const pe = /idrott/i.test(a.title);
+             return `
+               <li class="${a.kind === "day_off" ? "off" : "event"}">
+                 <div class="row">
+                   <span class="when">${esc(shortDay(a.start))}</span>
+                   <span class="what">
+                     <span class="title">${pe ? `<span class="chip chip-pe">Idrott</span> ` : ""}${esc(a.title)}</span>
+                     ${meta.length ? `<span class="meta">${meta.map(esc).join(" · ")}</span>` : ""}
+                   </span>
+                 </div>
+               </li>`;
+           })
+           .join("")}</ul>`
+      : "";
+
     this.shadowRoot.innerHTML = `${STYLE}
       <ha-card>
         <div class="header">
@@ -212,6 +237,7 @@ class YclassCard extends HTMLElement {
         ${lunchHtml}
         <div class="section">Läxor och prov</div>
         ${hwHtml}
+        ${agendaHtml}
       </ha-card>`;
   }
 
@@ -260,6 +286,10 @@ const STYLE = `<style>
   .desc { margin: 6px 0 2px calc(5.5em + 12px); font-size: 0.9em; color: var(--secondary-text-color); white-space: normal; }
   .desc a { display: block; margin-top: 4px; color: var(--primary-color); }
   .empty, .more { padding: 6px 0; }
+  .agenda { margin: 0; padding: 0; list-style: none; }
+  .agenda li { padding: 6px 0; }
+  .agenda li + li { border-top: 1px solid var(--divider-color); }
+  .agenda .off .title { font-weight: 500; }
 </style>`;
 
 // The integration loads this file early in the frontend's boot. During boot

@@ -39,6 +39,7 @@ DEFAULT_ORG = 189
 
 EVENT_TYPE_LECTURE = 1
 EVENT_TYPE_ASSIGNMENT = 2
+EVENT_TYPE_SCHOOL_EVENT = 4  # "Kalenderhändelse": skolfotografering, utvecklingssamtal, idrottsdag, ...
 EVENT_TYPE_VACANT_DAY = 8
 
 _TIMEOUT = aiohttp.ClientTimeout(total=30)
@@ -108,6 +109,16 @@ class DayOff:
 
 
 @dataclass(slots=True)
+class SchoolEvent:
+    title: str
+    start: datetime  # naive, Swedish local time
+    end: datetime | None
+    all_day: bool
+    description: str
+    url: str
+
+
+@dataclass(slots=True)
 class Lesson:
     title: str
     start: datetime  # naive, Swedish local time
@@ -148,6 +159,64 @@ class CalendarData:
     days_off: list[DayOff] = field(default_factory=list)
     lessons: list[Lesson] = field(default_factory=list)
     lunch: dict[date, list[str]] = field(default_factory=dict)
+    events: list[SchoolEvent] = field(default_factory=list)
+
+    def agenda(self, first: date, last: date) -> list[dict[str, Any]]:
+        """Days off and school events touching first..last, in date order.
+
+        Leaves out days off that fall on a weekend only (a Sunday holiday
+        changes nothing) and those inside a longer day-off period (Trettondagen
+        in the middle of jullovet).
+        """
+        items: list[tuple[date, dict[str, Any]]] = []
+        for off in self.days_off:
+            if off.end < first or off.start > last:
+                continue
+            if all((off.start + timedelta(days=i)).weekday() >= 5 for i in range((off.end - off.start).days + 1)):
+                continue
+            if any(
+                other is not off
+                and other.start <= off.start
+                and off.end <= other.end
+                and (other.end - other.start) > (off.end - off.start)
+                for other in self.days_off
+            ):
+                continue
+            items.append(
+                (
+                    off.start,
+                    {
+                        "kind": "day_off",
+                        "title": off.title,
+                        "start": off.start.isoformat(),
+                        "end": off.end.isoformat(),
+                        "time": None,
+                        "description": _drop_title_prefix(off.title, off.description),
+                    },
+                )
+            )
+        for ev in self.events:
+            day = ev.start.date()
+            end_day = ev.end.date() if ev.end and ev.end.date() > day else day
+            if end_day < first or day > last:
+                continue
+            time = None
+            if not ev.all_day:
+                time = f"{ev.start:%H:%M}" + (f"–{ev.end:%H:%M}" if ev.end else "")
+            items.append(
+                (
+                    day,
+                    {
+                        "kind": "event",
+                        "title": ev.title,
+                        "start": day.isoformat(),
+                        "end": end_day.isoformat(),
+                        "time": time,
+                        "description": ev.description,
+                    },
+                )
+            )
+        return [item for _, item in sorted(items, key=lambda pair: pair[0])]
 
     def school_days(self, first: date) -> list[SchoolDay]:
         """Days from `first` on that have at least one lesson not cancelled."""
@@ -186,6 +255,14 @@ def html_to_text(fragment: str | None) -> str:
     text = html.unescape(text).replace("\xa0", " ")
     lines = [re.sub(r"[ \t]+", " ", line).strip() for line in text.splitlines()]
     return "\n".join(line for line in lines if line)
+
+
+def _drop_title_prefix(title: str, text: str) -> str:
+    """'Studiedag - Skolan är stängd ...' under the title 'Studiedag' -> 'Skolan är stängd ...'."""
+    match = re.match(r"\s*([^-–]{1,30}?)\s*[-–]\s*(.+)", text, re.S)
+    if match and match.group(1).casefold()[:5] == title.strip().casefold()[:5]:
+        return match.group(2).strip()
+    return text
 
 
 def _parse_dt(value: str) -> datetime:
@@ -287,6 +364,17 @@ def parse_events(events: list[dict[str, Any]]) -> CalendarData:
                     url=urljoin(APP_URL, ev.get("detailUrl") or ""),
                 )
             )
+        elif etype == EVENT_TYPE_SCHOOL_EVENT and ev.get("start"):
+            data.events.append(
+                SchoolEvent(
+                    title=(ev.get("title") or "").strip(),
+                    start=_parse_dt(ev["start"]),
+                    end=_parse_dt(ev["end"]) if ev.get("end") else None,
+                    all_day=bool(ev.get("allDay")),
+                    description=html_to_text(ev.get("text")),
+                    url=urljoin(APP_URL, ev.get("detailUrl") or ""),
+                )
+            )
         elif etype == EVENT_TYPE_VACANT_DAY:
             start = _parse_dt(ev["start"]).date()
             end = _parse_dt(ev["end"]).date() if ev.get("end") else start
@@ -300,6 +388,7 @@ def parse_events(events: list[dict[str, Any]]) -> CalendarData:
             )
     data.homework.sort(key=lambda h: (h.due, h.id))
     data.days_off.sort(key=lambda d: d.start)
+    data.events.sort(key=lambda e: e.start)
     data.lessons.sort(key=lambda lesson: lesson.start)
     return data
 

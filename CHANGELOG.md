@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0 (2026-10-21)
+
+- Card: new section *Lov och händelser* with days off (studiedag, lov,
+  holidays on weekdays) and school events (e.g. skolfotografering,
+  utvecklingssamtal, idrottsdag) for the coming 30 days.
+- New calendar *Händelser* with the school events; the schoolday sensor has
+  the 30-day list in the `agenda` attribute.
+- The Idrott row no longer says "ta med idrottskläder".
+
 ## 1.1.0 (2026-10-21)
 
 - Card: a row with an *Idrott* label and the lesson time when the school day
