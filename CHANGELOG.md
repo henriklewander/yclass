@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.0 (2026-11-02)
+
+- Vklass is checked about every two hours at random times (90-150 minutes
+  apart) instead of on the hour, and not at all between 22:00 and 06:00; the
+  first check of the day comes at a random time between 06:00 and 07:00.
+- Requests to Vklass are sent like Chrome on a school Chromebook.
+
 ## 1.4.0 (2026-11-02)
 
 - Teachers often write the real homework on the lesson in the schedule

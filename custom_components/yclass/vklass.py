@@ -52,6 +52,17 @@ EVENT_TYPE_VACANT_DAY = 8
 _SWEDEN = ZoneInfo("Europe/Stockholm")
 _TIMEOUT = aiohttp.ClientTimeout(total=30)
 _MAX_REDIRECTS = 15
+# Sent like Chrome on a school Chromebook (ChromeOS freezes the platform
+# version in the user agent at 14541.0.0).
+_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/156.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "sv-SE,sv;q=0.9,en-US;q=0.8,en;q=0.7",
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Chrome OS"',
+}
 # /Events/FullCalendar silently stops about a month after `start`, so longer
 # ranges are fetched in slices of this many days.
 _SLICE_DAYS = 28
@@ -584,7 +595,7 @@ class VklassClient:
                 method,
                 URL(url, encoded=True),
                 data=data,
-                headers=headers,
+                headers=_BROWSER_HEADERS | (headers or {}),
                 allow_redirects=False,
                 timeout=_TIMEOUT,
             ) as resp:

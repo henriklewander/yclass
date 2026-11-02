@@ -8,8 +8,6 @@ DOMAIN = "yclass"
 # Vklass reports wall-clock times in Swedish local time, whatever HA's zone is.
 VKLASS_TZ = ZoneInfo("Europe/Stockholm")
 
-UPDATE_INTERVAL = timedelta(hours=1)
-
 # While Vklass's bot protection blocks the sign-in, wait this long before the
 # next try, doubling each time it is still blocked.
 BLOCKED_BACKOFF_MIN = timedelta(hours=6)

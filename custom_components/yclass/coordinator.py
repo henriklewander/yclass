@@ -21,10 +21,10 @@ from .const import (
     BLOCKED_BACKOFF_MIN,
     CONF_ICAL_URL,
     DOMAIN,
-    UPDATE_INTERVAL,
     WINDOW_AHEAD,
     WINDOW_PAST,
 )
+from .schedule import POLL_MAX, next_poll
 from .vklass import Blocked, CalendarData, InvalidAuth, VklassClient, VklassError, fetch_ics
 
 _LOGGER = logging.getLogger(__name__)
@@ -38,6 +38,8 @@ SOURCE_CACHE = "cache"  # neither answered: the last data we had
 
 class YclassCoordinator(DataUpdateCoordinator[CalendarData]):
     """Keeps the homework and days off for WINDOW_PAST..WINDOW_AHEAD around today.
+
+    Polls about every two hours at random times, and not at night (schedule.py).
 
     Signs in to Vklass when it can. While Vklass's bot protection blocks the
     sign-in, it waits BLOCKED_BACKOFF_MIN, doubling up to BLOCKED_BACKOFF_MAX,
@@ -54,7 +56,7 @@ class YclassCoordinator(DataUpdateCoordinator[CalendarData]):
             _LOGGER,
             config_entry=entry,
             name=f"{DOMAIN} {entry.title}",
-            update_interval=UPDATE_INTERVAL,
+            update_interval=POLL_MAX,  # replaced by a random gap on every poll
         )
         self.client = client
         self.window_start = date.min
@@ -91,6 +93,9 @@ class YclassCoordinator(DataUpdateCoordinator[CalendarData]):
         return data
 
     async def _async_update_data(self) -> CalendarData:
+        # Set before anything can fail: HA schedules the next poll from it either way.
+        now = dt_util.utcnow()
+        self.update_interval = next_poll(now) - now
         today = dt_util.now().date()
         start, end = today - WINDOW_PAST, today + WINDOW_AHEAD
         errors: list[str] = []

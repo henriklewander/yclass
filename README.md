@@ -83,7 +83,8 @@ max_items: 10                    # optional
 | `calendar.<name>_lediga_dagar` | Holidays, study days and other days off. |
 | `calendar.<name>_handelser` | School events such as photo day or development talks. |
 
-Vklass is checked once an hour. Vklass publishes the lunch menu for this week
+Vklass is checked about every two hours at random times, and not between
+22:00 and 06:00. Vklass publishes the lunch menu for this week
 and next.
 
 ## Development
