@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.3.0 (2026-11-02)
+
+- Vklass has put bot protection (Baffin Bay) in front of app.vklass.se, which
+  blocks the sign-in. yclass now recognises that, waits 6 hours (doubling up to
+  24) before trying again, and logs it once instead of every hour.
+- New option *Calendar link (iCal)* (*Configure* on the integration): the
+  guardian's calendar subscription from cal.vklass.se. While Vklass blocks the
+  sign-in, lessons (school day start/end, Idrott) and homework/tests come from
+  there. Lunch, days off, school events and homework texts are not in the
+  subscription; they are kept from the last successful sign-in.
+- If neither answers, the entities keep the last data instead of going
+  unavailable, so the card no longer goes blank.
+- Card: a status line when the data is from the subscription or old.
+- The sign-in no longer counts as successful when Vklass answers with a page
+  that does not name the student.
+
 ## 1.2.0 (2026-10-21)
 
 - Card: new section *Lov och händelser* with days off (studiedag, lov,

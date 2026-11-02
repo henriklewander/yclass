@@ -78,7 +78,9 @@ class YclassSchoolDaySensor(YclassEntity, SensorEntity):
     """
 
     _attr_device_class = SensorDeviceClass.TIMESTAMP
-    _unrecorded_attributes = frozenset({"days", "lunch", "pe", "agenda", "first_name", "reference_date"})
+    _unrecorded_attributes = frozenset(
+        {"days", "lunch", "pe", "agenda", "first_name", "reference_date", "source", "vklass_updated", "blocked_until"}
+    )
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -102,14 +104,20 @@ class YclassSchoolDaySensor(YclassEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        student = self.coordinator.client.student
+        coordinator = self.coordinator
+        student = coordinator.client.student
         days = self._days()
         ref = reference_date(dt_util.now())
         attrs: dict[str, Any] = {
-            "first_name": student.first_name if student else None,
+            # The entry title is the full name from the first sign-in.
+            "first_name": student.first_name if student else coordinator.config_entry.title.split(" ")[0],
             "reference_date": ref.isoformat(),
             "days": [day.as_dict() for day in days[:DAYS_LISTED]],
-            "agenda": self.coordinator.data.agenda(ref, ref + timedelta(days=AGENDA_DAYS)),
+            "agenda": coordinator.data.agenda(ref, ref + timedelta(days=AGENDA_DAYS)),
+            # "vklass", "ical" (the calendar subscription) or "cache" (neither answered)
+            "source": coordinator.source,
+            "vklass_updated": coordinator.vklass_updated.isoformat() if coordinator.vklass_updated else None,
+            "blocked_until": coordinator.blocked_until.isoformat() if coordinator.blocked_until else None,
         }
         if days:
             first = days[0]

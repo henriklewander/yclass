@@ -13,7 +13,7 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 from homeassistant.util import dt as dt_util
 
 from .const import VKLASS_TZ
-from .coordinator import YclassConfigEntry, YclassCoordinator
+from .coordinator import SOURCE_VKLASS, YclassConfigEntry, YclassCoordinator
 from .entity import YclassEntity
 from .vklass import CalendarData, DayOff, Homework, SchoolEvent
 
@@ -115,7 +115,8 @@ class YclassCalendar(YclassEntity, CalendarEntity):
         coordinator = self.coordinator
         data = coordinator.data
         first, last = start_date.date(), end_date.date()
-        if first < coordinator.window_start or last > coordinator.window_end:
+        # Only a signed-in Vklass can fetch other ranges; the subscription is one fixed month.
+        if coordinator.source == SOURCE_VKLASS and (first < coordinator.window_start or last > coordinator.window_end):
             try:
                 data = await coordinator.fetch_range(first, last + timedelta(days=1))
             except UpdateFailed as err:

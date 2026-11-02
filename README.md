@@ -17,6 +17,15 @@ comes with a dashboard card that shows all of it together.
 If a password changes, HA asks for the new one under *Settings → Devices &
 services*.
 
+### Calendar subscription (recommended)
+
+Since November 2026 Vklass's bot protection often blocks the sign-in. Under
+*Settings → Devices & services → yclass → Configure*, paste the student's
+calendar subscription link from Vklass, as guardian
+(`https://cal.vklass.se/<id>.ics?custodian=true`). While the sign-in is
+blocked, lessons and homework/tests come from there; lunch, days off, school
+events and homework texts stay as they were at the last successful sign-in.
+
 ## The card
 
 *Edit dashboard → Add card*, then search for **yclass** under *By card*, or

@@ -133,6 +133,15 @@ class YclassCard extends HTMLElement {
     const name = sa.first_name || (device?.name_by_user || device?.name || "").split(" ")[0] || "Elev";
     const refDate = sa.reference_date || isoDate(new Date());
 
+    // Where the data came from: a full Vklass sign-in, the calendar
+    // subscription (no lunch, days off or homework texts), or neither.
+    const fromVklass = !sa.source || sa.source === "vklass";
+    const statusText = {
+      ical: "Från Vklass-kalendern – lunch, lov och läxtexter uppdateras inte",
+      cache: "Kunde inte nå Vklass – visar senast hämtade",
+    }[sa.source];
+    const statusHtml = statusText ? `<div class="status muted">${esc(statusText)}</div>` : "";
+
     let dayHtml;
     if (sa.date) {
       dayHtml = `
@@ -167,7 +176,7 @@ class YclassCard extends HTMLElement {
              })
              .join("")}</ul>
          </div>`
-      : sa.date
+      : sa.date && fromVklass
         ? `<div class="lunch muted"><ha-icon icon="mdi:silverware-fork-knife"></ha-icon><span>Ingen matsedel ännu</span></div>`
         : "";
 
@@ -232,6 +241,7 @@ class YclassCard extends HTMLElement {
           <div class="name">${esc(name)}</div>
           <ha-icon icon="mdi:school-outline"></ha-icon>
         </div>
+        ${statusHtml}
         ${dayHtml}
         ${peHtml}
         ${lunchHtml}
@@ -257,6 +267,7 @@ const STYLE = `<style>
   .header { display: flex; align-items: center; justify-content: space-between; }
   .name { font-size: 1.6em; font-weight: 500; line-height: 1.2; }
   .header ha-icon { color: var(--state-icon-color, var(--primary-color)); }
+  .status { font-size: 0.85em; margin-top: 2px; }
   .day { margin-top: 12px; }
   .day-label { font-size: 0.95em; color: var(--secondary-text-color); text-transform: none; }
   .times { display: flex; gap: 24px; margin-top: 4px; }

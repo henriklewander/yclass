@@ -9,20 +9,50 @@ from typing import Any
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlowWithReload
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import DOMAIN
-from .vklass import InvalidAuth, Student, VklassClient, VklassError, new_cookie_jar
+from .const import CONF_ICAL_URL, DOMAIN
+from .vklass import InvalidAuth, Student, VklassClient, VklassError, fetch_ics, new_cookie_jar
 
 _LOGGER = logging.getLogger(__name__)
 
 USER_SCHEMA = vol.Schema({vol.Required(CONF_USERNAME): str, vol.Required(CONF_PASSWORD): str})
 REAUTH_SCHEMA = vol.Schema({vol.Required(CONF_PASSWORD): str})
+OPTIONS_SCHEMA = vol.Schema({vol.Optional(CONF_ICAL_URL): str})
+
+
+class YclassOptionsFlow(OptionsFlowWithReload):
+    """The calendar subscription used while Vklass cannot be signed in to."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            url = (user_input.get(CONF_ICAL_URL) or "").strip().replace("webcal://", "https://", 1)
+            if url:
+                try:
+                    await fetch_ics(async_get_clientsession(self.hass), url)
+                except (VklassError, aiohttp.ClientError, TimeoutError, ValueError):
+                    _LOGGER.exception("Could not read the calendar subscription")
+                    errors[CONF_ICAL_URL] = "invalid_ical"
+            if not errors:
+                return self.async_create_entry(data={CONF_ICAL_URL: url} if url else {})
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(OPTIONS_SCHEMA, user_input or self.config_entry.options),
+            errors=errors,
+        )
 
 
 class YclassConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> YclassOptionsFlow:
+        return YclassOptionsFlow()
 
     async def _try_login(self, username: str, password: str) -> tuple[Student | None, dict[str, str]]:
         try:

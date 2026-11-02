@@ -26,6 +26,20 @@
       "reauth_successful": "Inloggad igen."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Kalenderprenumeration",
+        "description": "När Vklass stoppar inloggningen läser yclass kalenderprenumerationen i stället: lektioner och läxor/prov, men inte lunch, lov eller läxtexter. Klistra in vårdnadshavarens prenumerationslänk från Vklass (https://cal.vklass.se/….ics?custodian=true). Lämna tomt för att inte använda den.",
+        "data": {
+          "ical_url": "Kalenderlänk (iCal)"
+        }
+      }
+    },
+    "error": {
+      "invalid_ical": "Kunde inte läsa någon kalender från länken."
+    }
+  },
   "entity": {
     "calendar": {
       "homework": {

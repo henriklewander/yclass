@@ -160,3 +160,75 @@ def test_agenda() -> None:
     assert items[4]["description"] == "Skolan är stängd"
     assert items[3]["time"] == "14:00–14:30" and items[3]["kind"] == "event"
     assert data.agenda(date(2026, 11, 3), date(2026, 12, 1)) == []
+
+
+ICS = "\r\n".join(
+    [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "BEGIN:VTIMEZONE",
+        "TZID:W. Europe Standard Time",
+        "BEGIN:STANDARD",
+        "DTSTART:20251002T030000",
+        "END:STANDARD",
+        "END:VTIMEZONE",
+        "BEGIN:VEVENT",
+        "DESCRIPTION:Teknik (7/TK-6)\\nNOTK-Lab\\nTa med dator.",
+        "DTEND;TZID=W. Europe Standard Time:20261102T151000",
+        "DTSTART;TZID=W. Europe Standard Time:20261102T141000",
+        "SUMMARY:Teknik (7/TK-6)\\nNOTK-Lab\\nTa med dator.\\nVi fortsätter koda me",
+        " d microbit \\nSLO",
+        "UID:1",
+        "END:VEVENT",
+        "BEGIN:VEVENT",
+        "DTEND;TZID=W. Europe Standard Time:20261104T123500",
+        "DTSTART;TZID=W. Europe Standard Time:20261104T120500",
+        "SUMMARY:Idrott och hälsa (5B/IDH)\\nIDH \\nSPE",
+        "UID:2",
+        "END:VEVENT",
+        "BEGIN:VEVENT",
+        "DESCRIPTION:Fredag 6 november 2026 kl: 08:10. ",
+        "DTSTART;VALUE=DATE:20261106",
+        "SUMMARY:Läxförhör tabell 5 och 6",
+        "UID:3",
+        "URL:https://www.vklass.se/ExamInfo.aspx?id=4889984&cid=4157754",
+        "END:VEVENT",
+        "BEGIN:VEVENT",
+        "DESCRIPTION:Tisdag 3 november 2026 kl: 08:00. ",
+        "DTSTART;VALUE=DATE:20261103",
+        "SUMMARY:Läxa v. 43-45: Läs vidare i romanen",
+        "UID:4",
+        "URL:https://www.vklass.se/ExamInfo.aspx?id=4909023&cid=4247838",
+        "END:VEVENT",
+        "BEGIN:VEVENT",
+        "DTSTART:20261105T130000Z",
+        "DTEND:20261105T133000Z",
+        "SUMMARY:Utvecklingssamtal",
+        "UID:5",
+        "END:VEVENT",
+        "END:VCALENDAR",
+        "",
+    ]
+)
+
+
+def test_parse_ics() -> None:
+    data = vklass.parse_ics(ICS)
+    assert [(lesson.title, lesson.code) for lesson in data.lessons] == [
+        ("Teknik (7/TK-6)", "NOTK-Lab"),
+        ("Idrott och hälsa (5B/IDH)", "IDH"),
+    ]
+    assert data.lessons[0].start == datetime(2026, 11, 2, 14, 10)
+    assert data.lessons[0].end == datetime(2026, 11, 2, 15, 10)
+    assert [(hw.id, hw.kind, hw.due) for hw in data.homework] == [
+        (4909023, "Läxa", datetime(2026, 11, 3, 8, 0)),
+        (4889984, "Prov", datetime(2026, 11, 6, 8, 10)),
+    ]
+    assert data.homework[0].all_day and data.homework[0].description == ""
+    assert data.homework[1].url == "https://www.vklass.se/ExamInfo.aspx?id=4889984&cid=4157754"
+    # Not "Subject (group)": an event, in Swedish time (CET in November)
+    assert [(ev.title, ev.start, ev.all_day) for ev in data.events] == [
+        ("Utvecklingssamtal", datetime(2026, 11, 5, 14, 0), False)
+    ]
+    days = data.school_days(date(2026, 11, 2))
+    assert days[1].pe_times() == [{"start": "12:05", "end": "12:35"}]

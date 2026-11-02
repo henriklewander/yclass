@@ -17,17 +17,24 @@ Flow, as observed 2026-10:
   6. GET app.vklass.se/Home/Welcome
      -> the start page; its `school-lunch-items.bind` attribute holds the
         lunch menu as JSON for this week and the next
+
+Since 2026-11-02 app.vklass.se sits behind Baffin Bay's bot protection, which
+blocks this client (Blocked). The guardian's calendar subscription
+(cal.vklass.se/<id>.ics?custodian=true, parsed by parse_ics) still works: it
+has lessons and homework/tests for the coming month, but no lunch, days off,
+school events or homework texts.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 import html
 import json
 import re
 from typing import Any
 from urllib.parse import quote, urljoin
+from zoneinfo import ZoneInfo
 
 import aiohttp
 from yarl import URL
@@ -42,6 +49,7 @@ EVENT_TYPE_ASSIGNMENT = 2
 EVENT_TYPE_SCHOOL_EVENT = 4  # "Kalenderhändelse": skolfotografering, utvecklingssamtal, idrottsdag, ...
 EVENT_TYPE_VACANT_DAY = 8
 
+_SWEDEN = ZoneInfo("Europe/Stockholm")
 _TIMEOUT = aiohttp.ClientTimeout(total=30)
 _MAX_REDIRECTS = 15
 # /Events/FullCalendar silently stops about a month after `start`, so longer
@@ -59,6 +67,10 @@ class InvalidAuth(VklassError):
 
 class SessionExpired(VklassError):
     """A data request was bounced to the login page."""
+
+
+class Blocked(VklassError):
+    """Vklass's bot protection (Baffin Bay) blocked or challenged the request."""
 
 
 @dataclass(slots=True)
@@ -386,11 +398,102 @@ def parse_events(events: list[dict[str, Any]]) -> CalendarData:
                     description=html_to_text(ev.get("text")),
                 )
             )
+    _sort(data)
+    return data
+
+
+def _sort(data: CalendarData) -> None:
     data.homework.sort(key=lambda h: (h.due, h.id))
     data.days_off.sort(key=lambda d: d.start)
     data.events.sort(key=lambda e: e.start)
     data.lessons.sort(key=lambda lesson: lesson.start)
+
+
+def _ics_unescape(value: str) -> str:
+    return re.sub(r"\\([\\;,nN])", lambda m: "\n" if m.group(1) in "nN" else m.group(1), value)
+
+
+def _ics_dt(params: str, value: str) -> tuple[datetime, bool]:
+    """(naive Swedish wall-clock time, all day) from a DTSTART/DTEND line."""
+    if "VALUE=DATE" in params.upper() and "T" not in value:
+        return datetime.strptime(value[:8], "%Y%m%d"), True
+    if value.endswith("Z"):
+        utc = datetime.strptime(value, "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
+        return utc.astimezone(_SWEDEN).replace(tzinfo=None), False
+    # Vklass writes TZID=W. Europe Standard Time, i.e. Swedish wall-clock time.
+    return datetime.strptime(value[:15], "%Y%m%dT%H%M%S"), False
+
+
+def _ics_kind(title: str) -> str | None:
+    """The feed has no kind; guess it from the title the way the card uses it."""
+    if re.search(r"(?i)prov|förhör|diagnos|\btest", title):
+        return "Prov"
+    if re.search(r"(?i)läxa", title):
+        return "Läxa"
+    return None
+
+
+def parse_ics(text: str) -> CalendarData:
+    """The guardian's calendar subscription: lessons, homework/tests and any other events.
+
+    Homework is the all-day events linking to ExamInfo.aspx?id=<assignment id>;
+    their DESCRIPTION is only "Tisdag 3 november 2026 kl: 08:00.". Lessons have
+    "Subject (group)\\ncode\\nteacher" as SUMMARY.
+    """
+    data = CalendarData()
+    unfolded = re.sub(r"\r?\n[ \t]", "", text)
+    for block in re.findall(r"BEGIN:VEVENT\r?\n(.*?)END:VEVENT", unfolded, re.S):
+        props: dict[str, tuple[str, str]] = {}
+        for line in block.splitlines():
+            name_params, sep, value = line.partition(":")
+            if sep:
+                name, _, params = name_params.partition(";")
+                props[name.upper()] = (params, value.strip())
+        if "DTSTART" not in props:
+            continue
+        start, all_day = _ics_dt(*props["DTSTART"])
+        end = _ics_dt(*props["DTEND"])[0] if "DTEND" in props else None
+        lines = [line.strip() for line in _ics_unescape(props.get("SUMMARY", ("", ""))[1]).splitlines()]
+        title = lines[0] if lines else ""
+        description = _ics_unescape(props.get("DESCRIPTION", ("", ""))[1]).strip()
+        url = props.get("URL", ("", ""))[1]
+        exam = re.search(r"ExamInfo\.aspx\?(?:.*&)?id=(\d+)", url)
+        if exam:
+            due = start
+            clock = re.search(r"kl:\s*(\d{1,2}):(\d{2})", description)
+            if clock:
+                due = start.replace(hour=int(clock.group(1)), minute=int(clock.group(2)))
+            data.homework.append(
+                Homework(
+                    id=int(exam.group(1)),
+                    title=title,
+                    due=due,
+                    all_day=all_day,
+                    description="",
+                    url=url,
+                    kind=_ics_kind(title),
+                )
+            )
+        elif not all_day and end and re.search(r"\(.+\)$", title):
+            data.lessons.append(
+                Lesson(title=title, start=start, end=end, cancelled=False, code=lines[1] if len(lines) > 1 else "")
+            )
+        else:
+            data.events.append(
+                SchoolEvent(title=title, start=start, end=end, all_day=all_day, description=description, url=url)
+            )
+    _sort(data)
     return data
+
+
+async def fetch_ics(session: aiohttp.ClientSession, url: str) -> CalendarData:
+    """Fetch and parse a calendar subscription from cal.vklass.se."""
+    async with session.get(url, timeout=_TIMEOUT) as resp:
+        resp.raise_for_status()
+        text = await resp.text()
+    if "BEGIN:VCALENDAR" not in text:
+        raise VklassError(f"{url.split('?')[0]} is not a calendar")
+    return parse_ics(text)
 
 
 class VklassClient:
@@ -438,10 +541,16 @@ class VklassClient:
                     if resp.status in (301, 302, 303):
                         method, data = "GET", None
                     continue
+                guarded = resp.headers.get("Server", "").startswith("baffin-bay")
+                if guarded and resp.status == 403:
+                    raise Blocked(f"Vklass's bot protection blocked {url.split('?')[0]}")
                 if resp.status in (401, 403):
                     return _Reply(url, resp.status, "", "")
                 resp.raise_for_status()
-                return _Reply(url, resp.status, resp.headers.get("Content-Type", ""), await resp.text())
+                text = await resp.text()
+                if guarded and "/.well-known/baffinbay/" in text:
+                    raise Blocked(f"Vklass's bot protection wants a browser check at {url.split('?')[0]}")
+                return _Reply(url, resp.status, resp.headers.get("Content-Type", ""), text)
         raise VklassError(f"Too many redirects, last at {url}")
 
     async def login(self) -> Student:
@@ -467,8 +576,11 @@ class VklassClient:
                 raise InvalidAuth("Göteborgs Stad rejected the username or password")
             raise VklassError(f"Login ended at {url} instead of {APP_URL}")
 
-        self.student = parse_student(page)
-        return self.student
+        student = parse_student(page)
+        if student.user_id is None:
+            raise VklassError(f"The page at {url} does not say which student is signed in")
+        self.student = student
+        return student
 
     async def _submit_credentials(self, page: str, url: str) -> tuple[str, str]:
         form = _form(page, "loginform")
