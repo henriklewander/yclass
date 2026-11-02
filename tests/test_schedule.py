@@ -32,8 +32,8 @@ def test_no_polls_at_night() -> None:
     for hour, minute in ((20, 45), (21, 0), (23, 30), (2, 0), (5, 0)):
         for poll in _next(hour, minute):
             assert schedule.QUIET_END <= poll.time() < schedule.QUIET_START
-    # After an evening poll the next one is the following morning, 06:00-07:00.
-    assert all(p.date().day == 4 and p.hour == 6 for p in _next(21))
+    # After an evening poll the next one is the following morning, 06:00-06:30.
+    assert all(p.date().day == 4 and p.hour == 6 and p.minute < 30 for p in _next(21))
     # At 02:00 it is the same morning.
     assert all(p.date().day == 3 and p.hour == 6 for p in _next(2))
 

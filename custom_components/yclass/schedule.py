@@ -20,7 +20,7 @@ POLL_MAX = timedelta(minutes=150)
 # up to MORNING_SPREAD after QUIET_END.
 QUIET_START = time(22, 0)
 QUIET_END = time(6, 0)
-MORNING_SPREAD = timedelta(minutes=60)
+MORNING_SPREAD = timedelta(minutes=30)
 
 
 def _between(rng: random.Random, low: timedelta, high: timedelta) -> timedelta:

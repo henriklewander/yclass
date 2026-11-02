@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.1 (2026-11-02)
+
+- The first check of the day comes between 06:00 and 06:30 (was 07:00), so
+  the morning card is up to date in time.
+
 ## 1.5.0 (2026-11-02)
 
 - Vklass is checked about every two hours at random times (90-150 minutes
