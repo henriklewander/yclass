@@ -30,7 +30,7 @@
     "step": {
       "init": {
         "title": "Calendar subscription",
-        "description": "While Vklass blocks the sign-in, yclass reads the calendar subscription instead: lessons and homework/tests, but no lunch, days off or homework texts. Paste the guardian's calendar subscription link from Vklass (https://cal.vklass.se/….ics?custodian=true). Leave empty to not use it.",
+        "description": "While Vklass blocks the sign-in, yclass reads the calendar subscription instead: lessons and homework/tests, but no lunch, days off or homework texts. Paste the guardian's calendar subscription link from Vklass ({example}). Leave empty to not use it.",
         "data": {
           "ical_url": "Calendar link (iCal)"
         }
