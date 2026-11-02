@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.1 (2026-11-02)
+
+- Vklass is checked 70-110 minutes apart (was 90-150). Vklass keeps a
+  session for 2 hours after it last renewed it and renews it on a request
+  once it is an hour old, so this keeps one session all day: the password
+  is sent once each morning instead of on almost every check, which also
+  means fewer requests in all.
+- After a restart, a session that is still valid is picked up with one
+  request instead of signing in again through Göteborgs Stad.
+
 ## 1.6.0 (2026-11-02)
 
 - The Vklass cookies are kept across Home Assistant restarts (in

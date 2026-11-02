@@ -1,4 +1,4 @@
-"""When to ask Vklass next: about every two hours by day, never at night.
+"""When to ask Vklass next: about every 1.5 hours by day, never at night.
 
 The times are random so that the requests do not arrive like clockwork, and
 two students in the same home do not sign in at the same moment. Kept free of
@@ -14,8 +14,11 @@ from zoneinfo import ZoneInfo
 _SWEDEN = ZoneInfo("Europe/Stockholm")
 
 # The gap between two polls by day, picked at random within this range.
-POLL_MIN = timedelta(minutes=90)
-POLL_MAX = timedelta(minutes=150)
+# Vklass's session ends 2 h after its cookie was last issued, and a request
+# re-issues it once it is at least 1 h old: gaps of 70-110 min keep one
+# session all day, so the password is sent once each morning.
+POLL_MIN = timedelta(minutes=70)
+POLL_MAX = timedelta(minutes=110)
 # No polls from QUIET_START to QUIET_END; the first poll after the night comes
 # up to MORNING_SPREAD after QUIET_END.
 QUIET_START = time(22, 0)

@@ -24,7 +24,7 @@ def _next(hour: int, minute: int = 0, day: int = 3) -> list[datetime]:
 def test_daytime_gap_is_random() -> None:
     now = datetime(2026, 11, 3, 10, 0, tzinfo=SWEDEN)
     polls = _next(10)
-    assert all(timedelta(minutes=90) <= p - now <= timedelta(minutes=150) for p in polls)
+    assert all(timedelta(minutes=70) <= p - now <= timedelta(minutes=110) for p in polls)
     assert len({p.minute for p in polls}) > 30
 
 

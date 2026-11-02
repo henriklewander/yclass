@@ -40,7 +40,7 @@ SOURCE_CACHE = "cache"  # neither answered: the last data we had
 class YclassCoordinator(DataUpdateCoordinator[CalendarData]):
     """Keeps the homework and days off for WINDOW_PAST..WINDOW_AHEAD around today.
 
-    Polls about every two hours at random times, and not at night (schedule.py).
+    Polls about every 1.5 hours at random times, and not at night (schedule.py).
 
     Signs in to Vklass when it can. While Vklass's bot protection blocks the
     sign-in, it waits BLOCKED_BACKOFF_MIN, doubling up to BLOCKED_BACKOFF_MAX,

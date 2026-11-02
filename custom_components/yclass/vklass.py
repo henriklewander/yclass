@@ -582,6 +582,7 @@ class VklassClient:
         self._initiate_url = f"{AUTH_URL}/saml/initiate?idp={quote(idp, safe='')}&org={org}"
         self._tags: dict[int, tuple[str | None, str | None]] = {}
         self.student: Student | None = None
+        self._resumable = False
 
     def save_cookies(self, path: Path) -> bool:
         """Write the session's cookies to `path` (blocking; JSON, mode 600); False if that failed.
@@ -602,6 +603,23 @@ class VklassClient:
             self._session.cookie_jar.load(path)
         except (OSError, ValueError, KeyError, TypeError, pickle.UnpicklingError):
             return False
+        self._resumable = True
+        return True
+
+    async def resume(self) -> bool:
+        """Pick up the session from loaded cookies: one request instead of a sign-in.
+
+        The Vklass session outlives Göteborgs Stad's (1 h), so signing in
+        again would mean sending the password even though Vklass still knows us.
+        """
+        self._resumable = False
+        reply = await self._request("GET", f"{APP_URL}/")
+        if not reply.url.startswith(APP_URL):
+            return False
+        student = parse_student(reply.text)
+        if student.user_id is None:
+            return False
+        self.student = student
         return True
 
     async def _request(
@@ -702,7 +720,7 @@ class VklassClient:
     async def fetch(self, start: date, end: date, *, lunch: bool = True) -> CalendarData:
         """Homework, lessons and days off between start and end, homework
         tagged with kind/subject; with `lunch`, also the lunch menu."""
-        if self.student is None:
+        if self.student is None and not (self._resumable and await self.resume()):
             await self.login()
         events: dict[str, dict[str, Any]] = {}
         slice_start = start
