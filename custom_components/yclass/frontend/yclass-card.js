@@ -47,6 +47,15 @@ function shortDay(iso) {
   return `${WEEKDAYS[date.getDay()]} ${date.getDate()}/${date.getMonth() + 1}`;
 }
 
+// Escaped text with line breaks kept and URLs as links named by their host.
+const richText = (s) =>
+  esc(s)
+    .replace(/https?:\/\/([^\s/<]+)[^\s<]*/g, (url, host) => `<a href="${url}" target="_blank" rel="noreferrer">${host}</a>`)
+    .replace(/\n/g, "<br>");
+
+// First line of a note, URLs shortened to their host.
+const firstLine = (s) => String(s ?? "").split("\n")[0].replace(/https?:\/\/([^\s/]+)\S*/g, "$1");
+
 // "Köttbullar med potatis (Fläsk, Nöt)" -> ["Köttbullar med potatis", "Fläsk, Nöt"]
 function splitDish(dish) {
   const m = String(dish).match(/^(.*?)\s*\(([^()]*)\)\s*$/);
@@ -200,7 +209,7 @@ class YclassCard extends HTMLElement {
                 </div>
                 ${
                   open
-                    ? `<div class="desc">${esc(h.description || "").replace(/\n/g, "<br>")}
+                    ? `<div class="desc">${richText(h.description || "")}
                        ${h.url ? `<a href="${esc(h.url)}" target="_blank" rel="noreferrer">Öppna i Vklass</a>` : ""}</div>`
                     : ""
                 }
@@ -208,6 +217,30 @@ class YclassCard extends HTMLElement {
           })
           .join("")}</ul>${items.length > max ? `<div class="more muted">+ ${items.length - max} till</div>` : ""}`
       : `<div class="empty muted">Inga läxor eller prov framöver 🎉</div>`;
+
+    // What teachers wrote on coming lessons: often the real homework (glosor,
+    // what to read) or things to bring. Tap to read all of it.
+    const notes = (sa.lesson_notes || []).slice(0, 8);
+    const notesHtml = notes.length
+      ? `<div class="section">Från lektionerna</div>
+         <ul class="hw notes">${notes
+           .map((n) => {
+             const id = `note-${n.date}-${n.start}`;
+             const open = this._expanded === id;
+             return `
+               <li class="${open ? "open" : ""}" data-id="${esc(id)}">
+                 <div class="row">
+                   <span class="when">${esc(shortDay(n.date))}</span>
+                   <span class="what">
+                     <span class="title">${esc(n.subject)} <span class="meta">${esc(n.start)}</span></span>
+                     ${open ? "" : `<span class="meta clip">${esc(firstLine(n.note))}</span>`}
+                   </span>
+                 </div>
+                 ${open ? `<div class="desc">${richText(n.note)}</div>` : ""}
+               </li>`;
+           })
+           .join("")}</ul>`
+      : "";
 
     // Days off and school events (studiedag, lov, skolfotografering, idrottsdag, ...)
     const agenda = sa.agenda || [];
@@ -247,6 +280,7 @@ class YclassCard extends HTMLElement {
         ${lunchHtml}
         <div class="section">Läxor och prov</div>
         ${hwHtml}
+        ${notesHtml}
         ${agendaHtml}
       </ha-card>`;
   }
@@ -288,6 +322,7 @@ const STYLE = `<style>
   .what { display: flex; flex-direction: column; min-width: 0; }
   .title { overflow-wrap: anywhere; }
   .meta { font-size: 0.85em; color: var(--secondary-text-color); }
+  .clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .chip { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 8px; font-size: 0.9em;
           font-weight: 500; color: var(--text-primary-color, #fff); background: var(--error-color, #db4437); }
   .chip-pe { background: var(--info-color, #039be5); margin-right: 0; }

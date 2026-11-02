@@ -137,11 +137,29 @@ class Lesson:
     end: datetime
     cancelled: bool
     code: str = ""  # the short subject code Vklass shows in the schedule, e.g. "IDH"
+    # What the teacher wrote on the lesson: often the actual homework, e.g. the
+    # words for a glosförhör, or "Ta med dator".
+    note: str = ""
 
     @property
     def is_pe(self) -> bool:
         """Idrott och hälsa: the day the student needs gym clothes."""
         return bool(re.search(r"(?i)idrott|gymnastik", self.title)) or self.code.upper().startswith("IDH")
+
+    @property
+    def subject(self) -> str:
+        """'Matematik (7D/MA)' -> 'Matematik'; a group name like '7D/GEHIRESH' gives way to the code."""
+        name = re.sub(r"\s*\([^()]*\)$", "", self.title).strip()
+        return self.code if "/" in name and self.code else name
+
+    def note_dict(self) -> dict[str, Any]:
+        return {
+            "date": self.start.date().isoformat(),
+            "start": f"{self.start:%H:%M}",
+            "end": f"{self.end:%H:%M}",
+            "subject": self.subject,
+            "note": self.note,
+        }
 
 
 @dataclass(slots=True)
@@ -245,6 +263,14 @@ class CalendarData:
                 pe=[lesson for lesson in lessons if lesson.is_pe],
             )
             for day, lessons in sorted(by_day.items())
+        ]
+
+    def lesson_notes(self, first: date, last: date) -> list[dict[str, Any]]:
+        """Lessons first..last that the teacher wrote something on, in time order."""
+        return [
+            lesson.note_dict()
+            for lesson in self.lessons
+            if lesson.note and not lesson.cancelled and first <= lesson.start.date() <= last
         ]
 
 
@@ -356,13 +382,16 @@ def parse_events(events: list[dict[str, Any]]) -> CalendarData:
     for ev in events:
         etype = ev.get("eventType")
         if etype == EVENT_TYPE_LECTURE and ev.get("start") and ev.get("end") and not ev.get("allDay"):
+            # The text is the subject code, then whatever the teacher wrote.
+            code, _, note = html_to_text(ev.get("text")).partition("\n")
             data.lessons.append(
                 Lesson(
                     title=(ev.get("title") or "").strip(),
                     start=_parse_dt(ev["start"]),
                     end=_parse_dt(ev["end"]),
                     cancelled=bool(ev.get("cancelled")),
-                    code=(ev.get("text") or "").strip().splitlines()[0] if (ev.get("text") or "").strip() else "",
+                    code=code,
+                    note=note,
                 )
             )
         elif etype == EVENT_TYPE_ASSIGNMENT:
@@ -424,6 +453,10 @@ def _ics_dt(params: str, value: str) -> tuple[datetime, bool]:
     return datetime.strptime(value[:15], "%Y%m%dT%H%M%S"), False
 
 
+# The last SUMMARY line of a lesson: the teachers' initials, e.g. "PNT" or "AKL,KHA".
+_TEACHERS = re.compile(r"^[A-ZÅÄÖ]{2,4}(,[A-ZÅÄÖ]{2,4})*$")
+
+
 def _ics_kind(title: str) -> str | None:
     """The feed has no kind; guess it from the title the way the card uses it."""
     if re.search(r"(?i)prov|förhör|diagnos|\btest", title):
@@ -438,7 +471,9 @@ def parse_ics(text: str) -> CalendarData:
 
     Homework is the all-day events linking to ExamInfo.aspx?id=<assignment id>;
     their DESCRIPTION is only "Tisdag 3 november 2026 kl: 08:00.". Lessons have
-    "Subject (group)\\ncode\\nteacher" as SUMMARY.
+    "Subject (group)\\ncode\\n<teacher's note, any lines>\\nteacher" as SUMMARY.
+    Homework due at the start of a lesson gets that lesson's note, which is
+    where the teacher usually writes what to study.
     """
     data = CalendarData()
     unfolded = re.sub(r"\r?\n[ \t]", "", text)
@@ -475,13 +510,30 @@ def parse_ics(text: str) -> CalendarData:
                 )
             )
         elif not all_day and end and re.search(r"\(.+\)$", title):
+            rest = lines[2:]
+            if rest and _TEACHERS.match(rest[-1]):
+                rest = rest[:-1]
             data.lessons.append(
-                Lesson(title=title, start=start, end=end, cancelled=False, code=lines[1] if len(lines) > 1 else "")
+                Lesson(
+                    title=title,
+                    start=start,
+                    end=end,
+                    cancelled=False,
+                    code=lines[1] if len(lines) > 1 else "",
+                    note="\n".join(line for line in rest if line),
+                )
             )
         else:
             data.events.append(
                 SchoolEvent(title=title, start=start, end=end, all_day=all_day, description=description, url=url)
             )
+    # Not the subject: a due time is often just the day's first lesson (a
+    # Svenska läxa "kl: 08:00" when Matematik starts at 08:00), so the note is
+    # labelled with the lesson it came from.
+    lessons = {lesson.start: lesson for lesson in data.lessons if lesson.note}
+    for hw in data.homework:
+        if not hw.description and (lesson := lessons.get(hw.due)):
+            hw.description = f"{lesson.subject} {lesson.start:%H:%M}: {lesson.note}"
     _sort(data)
     return data
 

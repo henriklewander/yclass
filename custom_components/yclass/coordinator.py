@@ -128,7 +128,13 @@ class YclassCoordinator(DataUpdateCoordinator[CalendarData]):
         previous = self.data or CalendarData()
         known = {hw.id: hw for hw in previous.homework}
         homework = [
-            replace(hw, description=old.description, kind=old.kind or hw.kind, subject=old.subject, url=old.url)
+            replace(
+                hw,
+                description=old.description or hw.description,
+                kind=old.kind or hw.kind,
+                subject=old.subject or hw.subject,
+                url=old.url,
+            )
             if (old := known.get(hw.id))
             else hw
             for hw in data.homework

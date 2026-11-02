@@ -162,6 +162,7 @@ def test_agenda() -> None:
     assert data.agenda(date(2026, 11, 3), date(2026, 12, 1)) == []
 
 
+
 ICS = "\r\n".join(
     [
         "BEGIN:VCALENDAR",
@@ -173,38 +174,49 @@ ICS = "\r\n".join(
         "END:STANDARD",
         "END:VTIMEZONE",
         "BEGIN:VEVENT",
-        "DESCRIPTION:Teknik (7/TK-6)\\nNOTK-Lab\\nTa med dator.",
         "DTEND;TZID=W. Europe Standard Time:20261102T151000",
         "DTSTART;TZID=W. Europe Standard Time:20261102T141000",
-        "SUMMARY:Teknik (7/TK-6)\\nNOTK-Lab\\nTa med dator.\\nVi fortsätter koda me",
-        " d microbit \\nSLO",
+        "SUMMARY:Teknik (6X/TK)\\nTK-Lab\\nTa med dator.\\nVi fortsätter med program",
+        " mering\\nhttps://example.com/kurs/1 \\nABC",
         "UID:1",
         "END:VEVENT",
         "BEGIN:VEVENT",
         "DTEND;TZID=W. Europe Standard Time:20261104T123500",
         "DTSTART;TZID=W. Europe Standard Time:20261104T120500",
-        "SUMMARY:Idrott och hälsa (5B/IDH)\\nIDH \\nSPE",
+        "SUMMARY:Idrott och hälsa (6X/IDH)\\nIDH \\nDEF\\,GHI",
         "UID:2",
         "END:VEVENT",
         "BEGIN:VEVENT",
-        "DESCRIPTION:Fredag 6 november 2026 kl: 08:10. ",
-        "DTSTART;VALUE=DATE:20261106",
-        "SUMMARY:Läxförhör tabell 5 och 6",
+        "DTEND;TZID=W. Europe Standard Time:20261106T123500",
+        "DTSTART;TZID=W. Europe Standard Time:20261106T113500",
+        "SUMMARY:Tyska (6X/TY)\\nTY\\nGlosor: der Hund\\, die Katze\\nJKL",
         "UID:3",
-        "URL:https://www.vklass.se/ExamInfo.aspx?id=4889984&cid=4157754",
+        "END:VEVENT",
+        "BEGIN:VEVENT",
+        "DTEND;TZID=W. Europe Standard Time:20261103T090000",
+        "DTSTART;TZID=W. Europe Standard Time:20261103T080000",
+        "SUMMARY:6X/SOAM (6X/SOAM)\\nSO\\nhttps://example.com/so \\n\\nMNO",
+        "UID:4",
+        "END:VEVENT",
+        "BEGIN:VEVENT",
+        "DESCRIPTION:Fredag 6 november 2026 kl: 11:35. ",
+        "DTSTART;VALUE=DATE:20261106",
+        "SUMMARY:Glosförhör tyska",
+        "UID:5",
+        "URL:https://www.vklass.se/ExamInfo.aspx?id=1000002&cid=2000001",
         "END:VEVENT",
         "BEGIN:VEVENT",
         "DESCRIPTION:Tisdag 3 november 2026 kl: 08:00. ",
         "DTSTART;VALUE=DATE:20261103",
         "SUMMARY:Läxa v. 43-45: Läs vidare i romanen",
-        "UID:4",
-        "URL:https://www.vklass.se/ExamInfo.aspx?id=4909023&cid=4247838",
+        "UID:6",
+        "URL:https://www.vklass.se/ExamInfo.aspx?id=1000001&cid=2000002",
         "END:VEVENT",
         "BEGIN:VEVENT",
         "DTSTART:20261105T130000Z",
         "DTEND:20261105T133000Z",
         "SUMMARY:Utvecklingssamtal",
-        "UID:5",
+        "UID:7",
         "END:VEVENT",
         "END:VCALENDAR",
         "",
@@ -214,21 +226,42 @@ ICS = "\r\n".join(
 
 def test_parse_ics() -> None:
     data = vklass.parse_ics(ICS)
-    assert [(lesson.title, lesson.code) for lesson in data.lessons] == [
-        ("Teknik (7/TK-6)", "NOTK-Lab"),
-        ("Idrott och hälsa (5B/IDH)", "IDH"),
+    assert [(lesson.subject, lesson.code, lesson.note) for lesson in data.lessons] == [
+        ("Teknik", "TK-Lab", "Ta med dator.\nVi fortsätter med programmering\nhttps://example.com/kurs/1"),
+        ("SO", "SO", "https://example.com/so"),  # a group name as title: the code is the subject
+        ("Idrott och hälsa", "IDH", ""),  # only teachers after the code: no note
+        ("Tyska", "TY", "Glosor: der Hund, die Katze"),
     ]
     assert data.lessons[0].start == datetime(2026, 11, 2, 14, 10)
     assert data.lessons[0].end == datetime(2026, 11, 2, 15, 10)
-    assert [(hw.id, hw.kind, hw.due) for hw in data.homework] == [
-        (4909023, "Läxa", datetime(2026, 11, 3, 8, 0)),
-        (4889984, "Prov", datetime(2026, 11, 6, 8, 10)),
+    assert [(hw.id, hw.kind, hw.due, hw.subject) for hw in data.homework] == [
+        (1000001, "Läxa", datetime(2026, 11, 3, 8, 0), None),
+        (1000002, "Prov", datetime(2026, 11, 6, 11, 35), None),
     ]
-    assert data.homework[0].all_day and data.homework[0].description == ""
-    assert data.homework[1].url == "https://www.vklass.se/ExamInfo.aspx?id=4889984&cid=4157754"
+    # Due at 08:00 when SO starts: still gets that lesson's note, labelled with where it came from.
+    assert data.homework[0].description == "SO 08:00: https://example.com/so"
+    assert data.homework[1].description == "Tyska 11:35: Glosor: der Hund, die Katze"
+    assert data.homework[1].url == "https://www.vklass.se/ExamInfo.aspx?id=1000002&cid=2000001"
     # Not "Subject (group)": an event, in Swedish time (CET in November)
     assert [(ev.title, ev.start, ev.all_day) for ev in data.events] == [
         ("Utvecklingssamtal", datetime(2026, 11, 5, 14, 0), False)
     ]
     days = data.school_days(date(2026, 11, 2))
-    assert days[1].pe_times() == [{"start": "12:05", "end": "12:35"}]
+    assert days[2].pe_times() == [{"start": "12:05", "end": "12:35"}]
+    notes = data.lesson_notes(date(2026, 11, 3), date(2026, 11, 6))
+    assert [(n["date"], n["start"], n["subject"]) for n in notes] == [
+        ("2026-11-03", "08:00", "SO"),
+        ("2026-11-06", "11:35", "Tyska"),
+    ]
+
+
+def test_lesson_note_from_vklass() -> None:
+    data = parse_events(
+        [
+            {"id": "Lecture1", "title": "Engelska", "start": "2026-11-04 09:00", "end": "2026-11-04 10:00",
+             "allDay": False, "eventType": 1, "lectureId": 1, "text": "<div>EN</div><div>Glosor: dog, cat</div>"},
+            {"id": "Lecture2", "title": "Svenska", "start": "2026-11-04 10:15", "end": "2026-11-04 11:00",
+             "allDay": False, "eventType": 1, "lectureId": 2, "text": "SV"},
+        ]
+    )
+    assert [(lesson.code, lesson.note) for lesson in data.lessons] == [("EN", "Glosor: dog, cat"), ("SV", "")]

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.0 (2026-11-02)
+
+- Teachers often write the real homework on the lesson in the schedule
+  (glosor, what to read, "ta med dator"). yclass now keeps that text: the
+  card has a new section *Från lektionerna* with the coming two weeks'
+  lessons that have a note (tap to read, links open), and the schoolday
+  sensor has them in `lesson_notes`.
+- Homework from the calendar subscription that is due at the start of a
+  lesson with a note gets that note as its text, labelled with the lesson
+  (e.g. "Tyska 11:35: Glosor: …").
+- Links in homework texts are clickable in the card.
+
 ## 1.3.0 (2026-11-02)
 
 - Vklass has put bot protection (Baffin Bay) in front of app.vklass.se, which

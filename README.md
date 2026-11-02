@@ -60,10 +60,12 @@ pick one of the student's entities under *By entity* and choose the suggested
 
 The card shows the student's first name, when the school day starts and ends,
 that day's lunch, and homework and tests in date order. Tests are marked
-*Prov*, and a day with Idrott och hälsa gets an *Idrott* row. Below that,
+*Prov*, and a day with Idrott och hälsa gets an *Idrott* row. *Från
+lektionerna* lists what teachers wrote on the coming two weeks' lessons, which
+is often the actual homework (glosor, what to read) or something to bring.
 *Lov och händelser* lists study days, holidays and school events for the coming
-30 days. Tap a homework item to read the teacher's text. After 17:00 the card
-shows the next school day.
+30 days. Tap a homework item or a lesson to read all of it. After 17:00 the
+card shows the next school day.
 
 ```yaml
 type: custom:yclass-card

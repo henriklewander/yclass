@@ -20,6 +20,8 @@ from .vklass import Homework, SchoolDay
 DAYS_LISTED = 10
 # How far ahead the `agenda` attribute (days off, school events) reaches.
 AGENDA_DAYS = 30
+# How far ahead the `lesson_notes` attribute (what teachers wrote on lessons) reaches.
+NOTES_DAYS = 14
 
 
 def reference_date(now: datetime) -> date:
@@ -79,7 +81,10 @@ class YclassSchoolDaySensor(YclassEntity, SensorEntity):
 
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _unrecorded_attributes = frozenset(
-        {"days", "lunch", "pe", "agenda", "first_name", "reference_date", "source", "vklass_updated", "blocked_until"}
+        {
+            "days", "lunch", "pe", "agenda", "lesson_notes", "first_name", "reference_date",
+            "source", "vklass_updated", "blocked_until",
+        }
     )
 
     async def async_added_to_hass(self) -> None:
@@ -114,6 +119,7 @@ class YclassSchoolDaySensor(YclassEntity, SensorEntity):
             "reference_date": ref.isoformat(),
             "days": [day.as_dict() for day in days[:DAYS_LISTED]],
             "agenda": coordinator.data.agenda(ref, ref + timedelta(days=AGENDA_DAYS)),
+            "lesson_notes": coordinator.data.lesson_notes(ref, ref + timedelta(days=NOTES_DAYS)),
             # "vklass", "ical" (the calendar subscription) or "cache" (neither answered)
             "source": coordinator.source,
             "vklass_updated": coordinator.vklass_updated.isoformat() if coordinator.vklass_updated else None,
