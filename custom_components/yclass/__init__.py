@@ -40,7 +40,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: YclassConfigEntry) -> bo
     session = aiohttp.ClientSession(cookie_jar=new_cookie_jar())
     entry.async_on_unload(session.close)
     client = VklassClient(session, entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD])
-    coordinator = YclassCoordinator(hass, entry, client)
+    cookies = cookie_file(hass, entry)
+    await hass.async_add_executor_job(client.load_cookies, cookies)
+    coordinator = YclassCoordinator(hass, entry, client, cookies)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -49,3 +51,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: YclassConfigEntry) -> bo
 
 async def async_unload_entry(hass: HomeAssistant, entry: YclassConfigEntry) -> bool:
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: YclassConfigEntry) -> None:
+    await hass.async_add_executor_job(cookie_file(hass, entry).unlink, True)
+
+
+def cookie_file(hass: HomeAssistant, entry: YclassConfigEntry) -> Path:
+    """Where the student's Vklass cookies are kept between restarts."""
+    return Path(hass.config.path(".storage", f"{DOMAIN}.{entry.entry_id}.cookies"))

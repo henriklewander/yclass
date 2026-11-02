@@ -265,3 +265,33 @@ def test_lesson_note_from_vklass() -> None:
         ]
     )
     assert [(lesson.code, lesson.note) for lesson in data.lessons] == [("EN", "Glosor: dog, cat"), ("SV", "")]
+
+
+def test_cookies_kept_across_restarts(tmp_path: Path) -> None:
+    import asyncio
+
+    import aiohttp
+    from yarl import URL
+
+    path = tmp_path / "cookies"
+
+    async def run() -> None:
+        async with aiohttp.ClientSession(cookie_jar=vklass.new_cookie_jar()) as session:
+            client = vklass.VklassClient(session, "user", "pass")
+            assert not client.load_cookies(path)
+            session.cookie_jar.update_cookies_from_headers(
+                ["GBG-SESSION-ID=abc==; Max-Age=3600; Path=/", "bbn_client_id=xyz; Max-Age=604800; Path=/"],
+                URL("https://auth.goteborg.se/idp"),
+            )
+            assert client.save_cookies(path)
+        async with aiohttp.ClientSession(cookie_jar=vklass.new_cookie_jar()) as session:
+            client = vklass.VklassClient(session, "user", "pass")
+            assert client.load_cookies(path)
+            sent = session.cookie_jar.filter_cookies(URL("https://auth.goteborg.se/idp/x"))
+            assert sent["GBG-SESSION-ID"].coded_value == "abc=="  # not quoted
+            assert "bbn_client_id" in sent
+            # Host-only, as received: not sent to other goteborg.se hosts.
+            assert not session.cookie_jar.filter_cookies(URL("https://www.goteborg.se/"))
+        assert path.stat().st_mode & 0o077 == 0
+
+    asyncio.run(run())

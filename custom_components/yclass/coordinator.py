@@ -6,6 +6,7 @@ import asyncio
 from dataclasses import replace
 from datetime import date, datetime, timedelta
 import logging
+from pathlib import Path
 
 import aiohttp
 
@@ -50,7 +51,9 @@ class YclassCoordinator(DataUpdateCoordinator[CalendarData]):
 
     config_entry: YclassConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: YclassConfigEntry, client: VklassClient) -> None:
+    def __init__(
+        self, hass: HomeAssistant, entry: YclassConfigEntry, client: VklassClient, cookie_file: Path
+    ) -> None:
         super().__init__(
             hass,
             _LOGGER,
@@ -59,6 +62,7 @@ class YclassCoordinator(DataUpdateCoordinator[CalendarData]):
             update_interval=POLL_MAX,  # replaced by a random gap on every poll
         )
         self.client = client
+        self.cookie_file = cookie_file
         self.window_start = date.min
         self.window_end = date.min
         self.source: str | None = None
@@ -79,7 +83,10 @@ class YclassCoordinator(DataUpdateCoordinator[CalendarData]):
             raise UpdateFailed(f"Vklass blocks sign-in; next try {dt_util.as_local(self.blocked_until):%H:%M}")
         try:
             async with self._lock:
-                data = await self.client.fetch(start, end, lunch=lunch)
+                try:
+                    data = await self.client.fetch(start, end, lunch=lunch)
+                finally:
+                    await self.hass.async_add_executor_job(self.client.save_cookies, self.cookie_file)
         except InvalidAuth as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except Blocked as err:

@@ -31,6 +31,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 import html
 import json
+from pathlib import Path
+import pickle
 import re
 from typing import Any
 from urllib.parse import quote, urljoin
@@ -580,6 +582,27 @@ class VklassClient:
         self._initiate_url = f"{AUTH_URL}/saml/initiate?idp={quote(idp, safe='')}&org={org}"
         self._tags: dict[int, tuple[str | None, str | None]] = {}
         self.student: Student | None = None
+
+    def save_cookies(self, path: Path) -> bool:
+        """Write the session's cookies to `path` (blocking; JSON, mode 600); False if that failed.
+
+        Kept across restarts like a browser keeps them: the sign-in at
+        Vklass (2 h) and Göteborgs Stad (1 h) and the bot protection's
+        client id (7 days).
+        """
+        try:
+            self._session.cookie_jar.save(path)
+        except OSError:
+            return False
+        return True
+
+    def load_cookies(self, path: Path) -> bool:
+        """Fill the session's cookie jar from `path` (blocking); False if there was none to use."""
+        try:
+            self._session.cookie_jar.load(path)
+        except (OSError, ValueError, KeyError, TypeError, pickle.UnpicklingError):
+            return False
+        return True
 
     async def _request(
         self, method: str, url: str, data: dict[str, str] | None = None, headers: dict[str, str] | None = None

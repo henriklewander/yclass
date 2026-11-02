@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.0 (2026-11-02)
+
+- The Vklass cookies are kept across Home Assistant restarts (in
+  `.storage/yclass.<entry>.cookies`), as a browser keeps them: a restart no
+  longer means a fresh sign-in with the password while the old one is still
+  valid, and Vklass's bot protection sees the same returning client.
+- The calendar link option no longer has a URL inside its translation
+  (failed Home Assistant's hassfest check).
+
 ## 1.5.1 (2026-11-02)
 
 - The first check of the day comes between 06:00 and 06:30 (was 07:00), so
